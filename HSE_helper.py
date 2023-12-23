@@ -117,7 +117,7 @@ async def day_lessons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not table:
         return
     
-    text = make_day_table(day, group, table, False)
+    text = make_day_table(day, group, table, True)
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode="HTML", disable_web_page_preview=True)
 
 
@@ -217,7 +217,6 @@ def make_day_table(day: str, group: str, table: dict, today: bool) -> str:
     '''
     Извлечение уроков для определенного дня и создание сообщения с расписанием для пользователя.
     '''
-
     text = f"<b><u>{day}</u></b>\n"
     if table[day] == {} and today:
         return text + "="*30 + "\n" + "Сегодня пар нет\n" + "="*30 + "\n"
@@ -230,7 +229,7 @@ def make_day_table(day: str, group: str, table: dict, today: bool) -> str:
         if group not in table[day][hour]:
             continue
         text += "="*30 + "\n"
-        if flag and now < float(hour.split(" - ")[0].replace(":", ".")):
+        if today and flag and now < float(hour.split(" - ")[0].replace(":", ".")):
             text += "✏<i>Следующая пара</i>✏\n"
             flag = False
         text += make_hour_table(hour, day, table, group)
@@ -270,11 +269,15 @@ async def update_table(context: ContextTypes.DEFAULT_TYPE = None) -> None:
     
     driver = webdriver.Chrome()
 
-    for course in groups:
-        for i, g in enumerate(groups[course]):
-            extract_lessons(fromdate=fromdate, todate=todate, groupid=g, course_number=course, group=str(i))
-            
-    driver.quit()
+    try:
+        for course in groups:
+            for i, g in enumerate(groups[course]):
+                try:
+                    extract_lessons(fromdate=fromdate, todate=todate, groupid=g, course_number=course, group=str(i))
+                except:
+                    continue
+    finally:
+        driver.quit()
 
 
 def extract_lessons(fromdate: str, todate: str, groupid: str, course_number: str, group: str) -> None:
