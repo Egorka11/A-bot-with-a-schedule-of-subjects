@@ -427,11 +427,7 @@ def launching_the_bot() -> None:
     '''
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.job_queue.run_once(update_table, when=0)
-    current_time = datetime.now()
-    seconds_since_midnight = (current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-    app.job_queue.run_once(update_table, when=86400-seconds_since_midnight)
-    app.job_queue.run_repeating(update_table, interval=86400)
+    app.job_queue.run_repeating(update_table, interval=86400, first=0)
         
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("select_group", send_course_select))
