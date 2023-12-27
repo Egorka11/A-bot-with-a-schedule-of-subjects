@@ -2,6 +2,9 @@ from telegram.ext import ApplicationBuilder, CommandHandler, filters, CallbackQu
 from telegram import Update
 
 class TelegramBot():
+    '''
+    A class that creates a bot for telegram, with the ability to add handlers and then launch
+    '''
     __slots__ = ["token", "online", "app", "handlers"]
 
     def __init__(self, token: str) -> None:
