@@ -8,6 +8,21 @@ from selenium import webdriver
 import time
 
 from params import OWNER_ID, MAIN_BOT_TOKEN, TEST_BOT_TOKEN
+from TelegramBot import TelegramBot
+
+
+
+
+if __name__ == '__main__':
+    mode = input("Test: 0\nMain: 1\n-> ")
+        
+    if mode == "0":
+        bot = TelegramBot(TEST_BOT_TOKEN)
+    elif mode == "1":
+        bot = TelegramBot(TEST_BOT_TOKEN)
+    else:
+        raise Exception("Invalide mode")
+    
 
 
 async def get_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -35,6 +50,7 @@ async def get_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return table_2023, str(group)
 
 
+@bot.AddCommandHandler("start")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Отправка приветственного сообщения.
@@ -42,6 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Привет! Я бот для помощи по учебе в ВШЭ. Я могу подсказать расписание или отправить домашнее задание.\nДля выбора своей группы отправь\n/select_group")
 
 
+@bot.AddCommandHandler("select_group")
 async def send_course_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Отправка пользователю сообщения с выбором года, когда он поступил на первый курс.
@@ -69,6 +86,7 @@ async def send_select_group(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await context.bot.edit_message_text(chat_id=update.effective_chat.id,  message_id=update.callback_query.message.id, text="Теперь выбери группу для доступа к быстрому расписанию", reply_markup=keyboard)
 
 
+@bot.AddCallbackQueryHandler
 async def select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Функция, которая вызывается при нажатии на клавиатуру в сообщении (InlineKeyboard).
@@ -103,6 +121,7 @@ async def select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id=update.effective_user.id, text=f"Твоя группа <b>{update.callback_query.data[:-6]}</b>\nКоманды с расписанием:\n/next - узнать, какая пара следующая\n/day - расписание на сегодня\n/tomorrow - расписание на завтра\n/week - расписание по дням недели", parse_mode="HTML")
 
 
+@bot.AddCommandHandler("day")
 async def day_lessons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Создания сообщения для пользователя, с предметами на данный день недели.
@@ -121,6 +140,7 @@ async def day_lessons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode="HTML", disable_web_page_preview=True)
 
 
+@bot.AddCommandHandler("next")
 async def next_lesson(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Создания сообщения для пользователя, показывающее, какая у него следующая пара.
@@ -150,6 +170,7 @@ async def next_lesson(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode="HTML", disable_web_page_preview=True)
 
 
+@bot.AddCommandHandler("tomorrow")
 async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Создания сообщения для пользователя с предметами на следующий день недели.
@@ -182,6 +203,7 @@ async def week_lessons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode="HTML", disable_web_page_preview=True)
 
 
+@bot.AddCommandHandler("week")
 async def ask_week_lessons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Отправка сообщения с выбором дня, на который пользователь хочет увидеть расписание.
@@ -256,6 +278,7 @@ def fetch_html_with_selen(url: str) -> str:
         return
 
 
+@bot.AddJobQuery(repeating=True, first=10., interval=86400.)
 async def update_table(context: ContextTypes.DEFAULT_TYPE = None) -> None:
     '''
     Функция, производящая обновление таблицы с расписанием. Вызывается каждые 24 часа.
@@ -401,6 +424,7 @@ def set_empty_table() -> None:
     table_2020 = {i: {} for i in week_days}
 
 
+@bot.AddCommandHandler("tell_everybody", filters=filters.Chat(chat_id=OWNER_ID))
 async def tell_everybody(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     '''
     Функция вызывается, если владелец бота отправляет команду "/tell_everybody" с текстом после нее. 
@@ -418,27 +442,6 @@ async def tell_everybody(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     for i in res:
         await context.bot.send_message(chat_id=i[0], text=text, parse_mode="HTML", reply_markup=keyboard)
-
-
-def launching_the_bot() -> None:
-    '''
-    Запуск бота.
-    Добавления обработчиков событий и функций с повторяющимся запуском.
-    '''
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.job_queue.run_repeating(update_table, interval=86400, first=0)
-        
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("select_group", send_course_select))
-    app.add_handler(CommandHandler("next", next_lesson))
-    app.add_handler(CommandHandler("day", day_lessons))
-    app.add_handler(CommandHandler("week", ask_week_lessons))
-    app.add_handler(CommandHandler("tell_everybody", tell_everybody, filters.Chat(chat_id=OWNER_ID)))
-    app.add_handler(CommandHandler("tomorrow", tomorrow))
-    app.add_handler(CallbackQueryHandler(select))
-
-    app.run_polling()
 
 
 
@@ -466,24 +469,14 @@ logging.basicConfig(
 
 
 if __name__ == '__main__':
-
     try:
-        mode = input("Test: 0\nMain: 1\n-> ")
-        
-        if mode == "0":
-            TOKEN = TEST_BOT_TOKEN
-        elif mode == "1":
-            TOKEN = MAIN_BOT_TOKEN
-        else:
-            raise Exception("Invalide mode")
-
         con = sql.connect("users.db")
         cur = con.cursor()
 
         cur.execute("CREATE TABLE IF NOT EXISTS users (id, grp, year)")
         con.commit()
-                
-        launching_the_bot()  
+                        
+        bot.on()
           
     finally:
         con.close()

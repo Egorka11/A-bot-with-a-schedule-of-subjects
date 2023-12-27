@@ -43,12 +43,12 @@ class TelegramBot():
         return decorator
 
 
-    def AddCallbackQueryHandler(self, command: str, filters=None):
+    def AddCallbackQueryHandler(self, pattern=None):
         def decorator(func):
             async def wrapper(update, context, *args, **kwargs):
                 return await func(update, context, *args, **kwargs)
 
-            handler = CallbackQueryHandler(command=command, callback=wrapper, filters=filters)
+            handler = CallbackQueryHandler(callback=wrapper, pattern=pattern)
             self.handlers.append(handler)
             return handler
 
