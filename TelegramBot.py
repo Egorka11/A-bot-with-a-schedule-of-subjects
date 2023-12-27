@@ -5,27 +5,21 @@ class TelegramBot():
     '''
     A class that creates a bot for telegram, with the ability to add handlers and then launch
     '''
-    __slots__ = ["token", "online", "app", "handlers"]
+    __slots__ = ["token", "online", "app"]
 
     def __init__(self, token: str) -> None:
         self.token = token
-        self.online = False
-        self.handlers = []
+        self.online = False        
+        self.app = ApplicationBuilder().token(self.token).build()
 
 
     def on(self) -> bool:
         if self.online:
             print("Bot is already online")
-
             return False
         
-        else:            
-            self.app = ApplicationBuilder().token(self.token).build()
-
-            for handler in self.handlers:
-                self.app.add_handler(handler)
+        else:
             self.app.run_polling()
-
             return True
         
 
@@ -43,7 +37,7 @@ class TelegramBot():
                 return await func(update, context, *args, **kwargs)
 
             handler = CommandHandler(command=command, callback=wrapper, filters=filters)
-            self.handlers.append(handler)
+            self.app.add_handler(handler)
             return handler
 
         return decorator
@@ -57,5 +51,19 @@ class TelegramBot():
             handler = CallbackQueryHandler(command=command, callback=wrapper, filters=filters)
             self.handlers.append(handler)
             return handler
+
+        return decorator
+    
+    
+    def AddJobQuery(self, repeating=False, first=None, interval=86400.0):
+        def decorator(func):
+            async def wrapper(context, *args, **kwargs):
+                return await func(context, *args, **kwargs)
+            
+            if repeating:
+                self.app.job_queue.run_repeating(wrapper, interval=interval, first=first)
+            else:
+                self.app.job_queue.run_once(wrapper, when=first)
+            return wrapper
 
         return decorator
