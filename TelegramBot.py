@@ -1,4 +1,5 @@
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
+from functools import wraps
 
 class TelegramBot():
     '''
@@ -40,41 +41,45 @@ class TelegramBot():
             return False
         
 
-    @staticmethod
-    def AddCommandHandler(command: str, filters=None):
+    @classmethod
+    def AddCommandHandler(cls, command: str, filters=None):
         def decorator(func):
             async def wrapper(update, context, *args, **kwargs):
                 return await func(update, context, *args, **kwargs)
 
             handler = CommandHandler(command=command, callback=wrapper, filters=filters)
-            TelegramBot.handlers.append(handler)
+            cls.handlers.append(handler)
 
             return handler
 
         return decorator
 
 
-    @staticmethod
-    def AddCallbackQueryHandler(pattern=None):
+    @classmethod
+    def AddCallbackQueryHandler(cls, pattern=None):
         def decorator(func):
+
+            @wraps(func)
             async def wrapper(update, context, *args, **kwargs):
                 return await func(update, context, *args, **kwargs)
 
             handler = CallbackQueryHandler(callback=wrapper, pattern=pattern)
-            TelegramBot.handlers.append(handler)
+            cls.handlers.append(handler)
 
             return handler
 
         return decorator
     
 
-    @staticmethod
-    def AddJobQuery(repeating=False, first=None, interval=86400.0):
+    @classmethod
+    def AddJobQuery(cls, repeating=False, first=None, interval=86400.0):
         def decorator(func):
+            
+            @wraps(func)
             async def wrapper(context, *args, **kwargs):
                 return await func(context, *args, **kwargs)
             
-            TelegramBot.job_queue.append({"repeating": repeating, "func": wrapper, "interval": interval, "first": first})
+            cls.job_queue.append({"repeating": repeating, "func": wrapper, "interval": interval, "first": first})
 
             return wrapper
 
